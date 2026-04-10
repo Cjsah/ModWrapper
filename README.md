@@ -1,4 +1,4 @@
-# A Mod Wrapper for Carpet Mod
+# A Mod Wrapper for Fabric Mod
 
 - First
 
