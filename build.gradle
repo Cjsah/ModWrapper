@@ -40,9 +40,8 @@ base {
     archivesName.set(project.archives_base_name)
 }
 
-def name = project.name
 def mods = project.parent.subprojects.findAll({
-    it.name != name
+    it.hasProperty('mcVersion')
 })
 
 mods.collect {
