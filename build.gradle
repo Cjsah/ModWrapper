@@ -129,31 +129,33 @@ publishMods {
     modLoaders.add("quilt")
     displayName = rootProject.mod_id.toUpperCase() + ' v' + fullModVersion
 
-    def required_mods = project.requeires.trim().split(/\s+/)
-
+    def required_mods = project.required_mods.trim().split(/\s+/)
 
     if (project.curseforge_id) {
-        accessToken = providers.environmentVariable("CURSEFORGE_TOKEN")
-        projectId = project.curseforge_id
-        requires('carpet')
-        required_mods.collect {
-            requires(it)
-        }
-        minecraftVersionRange {
-            start = startVersion
-            end = endVersion
+        curseforge {
+            accessToken = providers.environmentVariable("CURSEFORGE_TOKEN")
+            projectId = project.curseforge_id
+            required_mods.collect {
+                requires(it)
+            }
+            minecraftVersionRange {
+                start = startVersion
+                end = endVersion
+            }
         }
     }
 
     if (project.modrinth_id) {
-        accessToken = providers.environmentVariable("MODRINTH_TOKEN")
-        projectId = project.modrinth_id
-        required_mods.collect {
-            requires(it)
-        }
-        minecraftVersionRange {
-            start = startVersion
-            end = endVersion
+        modrinth {
+            accessToken = providers.environmentVariable("MODRINTH_TOKEN")
+            projectId = project.modrinth_id
+            required_mods.collect {
+                requires(it)
+            }
+            minecraftVersionRange {
+                start = startVersion
+                end = endVersion
+            }
         }
     }
 }
