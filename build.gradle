@@ -1,0 +1,159 @@
+import groovy.json.JsonBuilder
+import groovy.json.JsonSlurper
+
+plugins {
+    id("java-library")
+    id "me.modmuss50.mod-publish-plugin" version "1.1.0"
+}
+
+ext {
+    getVersionSuffix = {
+        String buildNumber
+        String buildType = 'build'
+        if (System.getenv("CI_BUILD") == 'false') buildNumber = null
+        else {
+            if (System.getenv("PR_BUILD") != 'false') buildType = 'pr'
+            buildNumber = System.getenv("GITHUB_RUN_NUMBER")
+        }
+        String versionSuffix = (buildNumber != null ? "+${buildType}.${buildNumber}" : "")
+        return versionSuffix
+    }
+    getVersionRange = {
+        def versionRange = project.mc_version_range.trim().split(/\s+/)
+        if (versionRange.length != 2) {
+            throw new GradleException("mc_version_range must contain exactly two space-separated values: '<start> <end>'")
+        }
+        def startVersion = versionRange[0]
+        def endVersion = versionRange[1]
+        return [startVersion, endVersion]
+    }
+
+}
+
+def fullModVersion = project.mod_version + project.getVersionSuffix()
+def (startVersion, endVersion) = project.getVersionRange()
+
+group = 'net.cjsah.mod.wrapper'
+version = 'v' + fullModVersion
+
+base {
+    archivesName.set(project.archives_base_name)
+}
+
+def name = project.name
+def mods = project.parent.subprojects.findAll({
+    it.name != name
+})
+
+mods.collect {
+    evaluationDependsOn(":${it.name}")
+}
+
+jar {
+    // disable cache
+    outputs.upToDateWhen { false }
+
+    dependsOn(mods.collect {
+        def mcVersion = it.findProperty("mcVersion") as int
+        mcVersion >= 26_00_00 ? it.tasks.jar : it.tasks.remapJar
+    })
+
+    doFirst {
+        delete fileTree("build/tmp/submods/META-INF/jars")
+
+        copy {
+            from {
+                mods.collect {
+                    def mcVersion = it.findProperty("mcVersion") as int
+                    (mcVersion >= 26_00_00 ? it.tasks.jar : it.tasks.remapJar).outputs.files
+                }
+            }
+
+            into("build/tmp/submods/META-INF/jars")
+        }
+    }
+
+    from("${rootDir}/LICENSE")
+    from("build/tmp/submods")
+}
+
+processResources {
+    // disable cache
+    outputs.upToDateWhen { false }
+
+    from("${rootDir}/icon.png") {
+        into("assets/${project.mod_id}-wrapper")
+    }
+
+    filesMatching("fabric.mod.json") {
+        expand([
+                "id"     : project.mod_id,
+                "version": fullModVersion,
+                "name"   : project.archives_base_name
+        ])
+    }
+
+    doLast {
+        ArrayList<?> jars = []
+
+        mods.each({
+            jars.add(["file": "META-INF/jars/${project.archives_base_name}-mc${it.minecraft_version}-v${fullModVersion}.jar"])
+        })
+
+        File file = file("build/resources/main/fabric.mod.json")
+        JsonSlurper slurper = new JsonSlurper()
+        JsonBuilder builder = new JsonBuilder(slurper.parse(file))
+        builder.content.jars = jars
+        BufferedWriter writer = file.newWriter()
+        writer.append(builder.toPrettyString())
+        writer.flush()
+        writer.close()
+    }
+}
+
+java {
+    sourceCompatibility(JavaVersion.VERSION_21)
+    targetCompatibility(JavaVersion.VERSION_21)
+}
+
+publishMods {
+    file = jar.archiveFile
+    changelog = rootDir.toPath().resolve("Changelog.md").toFile().text
+    type = switch (project.release_channel.toLowerCase()) {
+        case "alpha" -> ALPHA
+        case "beta" -> BETA
+        case "release" -> STABLE
+        default -> throw new GradleException("Invalid release channel: ${project.release_channel}. Must be one of 'alpha', 'beta', or 'release'.")
+    }
+    modLoaders.add("fabric")
+    modLoaders.add("quilt")
+    displayName = rootProject.mod_id.toUpperCase() + ' v' + fullModVersion
+
+    def required_mods = project.requeires.trim().split(/\s+/)
+
+
+    if (project.curseforge_id) {
+        accessToken = providers.environmentVariable("CURSEFORGE_TOKEN")
+        projectId = project.curseforge_id
+        requires('carpet')
+        required_mods.collect {
+            requires(it)
+        }
+        minecraftVersionRange {
+            start = startVersion
+            end = endVersion
+        }
+    }
+
+    if (project.modrinth_id) {
+        accessToken = providers.environmentVariable("MODRINTH_TOKEN")
+        projectId = project.modrinth_id
+        required_mods.collect {
+            requires(it)
+        }
+        minecraftVersionRange {
+            start = startVersion
+            end = endVersion
+        }
+    }
+}

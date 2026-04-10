@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "id": "${id}-wrapper",
+  "version": "1.0.1",
+  "name": "${name}-wrapper",
+  "description": "A Mod Wrapper",
+  "authors": [
+    "Cjsah"
+  ],
+  "contact": {
+    "homepage": "https://github.com/Cjsah/ModWrapper",
+    "issues": "https://github.com/Cjsah/ModWrapper/issues",
+    "sources": "https://github.com/Cjsah/ModWrapper"
+  },
+  "license": "MIT",
+  "environment": "*",
+  "entrypoints": {
+  },
+  "depends": {
+    "minecraft": "*"
+  }
+}
