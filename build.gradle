@@ -128,7 +128,7 @@ publishMods {
     modLoaders.add("quilt")
     displayName = rootProject.mod_id.toUpperCase() + ' v' + fullModVersion
 
-    def required_mods = project.required_mods.trim().split(/\s+/)
+    def required_mods = project.hasProperty("required_mods") ? [] : project.required_mods.trim().split(/\s+/)
 
     if (project.hasProperty("curseforge_id")) {
         curseforge {
