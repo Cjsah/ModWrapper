@@ -27,7 +27,13 @@ ext {
         def endVersion = versionRange[1]
         return [startVersion, endVersion]
     }
+    getPropContent = { String key ->
+        if (!project.hasProperty(key)) {
+            return []
+        }
 
+        return project.property(key).toString().trim().split(/\s+/)
+    }
 }
 
 def fullModVersion = project.mod_version + project.getVersionSuffix()
@@ -128,15 +134,19 @@ publishMods {
     modLoaders.add("quilt")
     displayName = rootProject.mod_id.toUpperCase() + ' v' + fullModVersion
 
-    def required_mods = project.hasProperty("required_mods") ? project.required_mods.trim().split(/\s+/) : []
+    def required_mods = getPropContent('required_mods')
+    def optional_mods = getPropContent('optional_mods')
+    def incompatible_mods = getPropContent('incompatible_mods')
+    def embeds_mods = getPropContent('embeds_mods')
 
     if (project.hasProperty("curseforge_id")) {
         curseforge {
             accessToken = providers.environmentVariable("CURSEFORGE_TOKEN")
             projectId = project.curseforge_id
-            required_mods.collect {
-                requires(it)
-            }
+            required_mods.collect { requires(it) }
+            optional_mods.collect { optional(it) }
+            incompatible_mods.collect { incompatible(it) }
+            embeds_mods.collect { embeds(it) }
             minecraftVersionRange {
                 start = startVersion
                 end = endVersion
@@ -148,9 +158,10 @@ publishMods {
         modrinth {
             accessToken = providers.environmentVariable("MODRINTH_TOKEN")
             projectId = project.modrinth_id
-            required_mods.collect {
-                requires(it)
-            }
+            required_mods.collect { requires(it) }
+            optional_mods.collect { optional(it) }
+            incompatible_mods.collect { incompatible(it) }
+            embeds_mods.collect { embeds(it) }
             minecraftVersionRange {
                 start = startVersion
                 end = endVersion
