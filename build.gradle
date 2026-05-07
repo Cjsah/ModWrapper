@@ -81,7 +81,7 @@ processResources {
     outputs.upToDateWhen { false }
 
     from("${rootDir}/icon.png") {
-        into("assets/${project.mod_id}-wrapper")
+        into("assets/${project.mod_id}_wrapper")
     }
 
     filesMatching("fabric.mod.json") {
