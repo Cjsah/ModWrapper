@@ -132,7 +132,12 @@ publishMods {
     }
     modLoaders.add("fabric")
     modLoaders.add("quilt")
-    displayName = rootProject.mod_id.toUpperCase() + ' v' + fullModVersion
+
+    def title = rootProject.hasProperty('mod_title') ?
+            rootProject.mod_title :
+            rootProject.mod_id.toUpperCase()
+
+    displayName = "$title v$fullModVersion"
 
     def required_mods = getPropContent('required_mods')
     def optional_mods = getPropContent('optional_mods')
