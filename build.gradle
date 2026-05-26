@@ -12,7 +12,7 @@ ext {
         String buildType = 'build'
         if (System.getenv("CI_BUILD") == 'false') buildNumber = null
         else {
-            if (System.getenv("PR_BUILD") != 'false') buildType = 'pr'
+            if (System.getenv("PR_BUILD") == 'true') buildType = 'pr'
             buildNumber = System.getenv("GITHUB_RUN_NUMBER")
         }
         String versionSuffix = (buildNumber != null ? "+${buildType}.${buildNumber}" : "")
