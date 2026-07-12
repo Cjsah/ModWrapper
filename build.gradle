@@ -54,6 +54,37 @@ mods.collect {
     evaluationDependsOn(":${it.name}")
 }
 
+repositories {
+    mavenLocal()
+    maven {
+        name 'mavenCentral'
+        url 'https://repo1.maven.org/maven2/'
+    }
+}
+
+configurations {
+    wrapperIncludes {
+        canBeResolved = true
+        canBeConsumed = false
+    }
+}
+
+def includes = []
+
+if (project.hasProperty('wrapper_includes')) {
+    includes = project.getProperty('wrapper_includes').split(',')
+}
+
+dependencies {
+    if (includes.size() > 0) {
+        includes.each {
+            implementation it
+            wrapperIncludes it
+        }
+    }
+}
+
+
 jar {
     // disable cache
     outputs.upToDateWhen { false }
@@ -75,6 +106,32 @@ jar {
             }
 
             into("build/tmp/submods/META-INF/jars")
+        }
+
+        if (includes.size() > 0) {
+            configurations.wrapperIncludes.resolvedConfiguration.resolvedArtifacts.each { artifact ->
+                def destFile = file("build/tmp/submods/META-INF/jars/${artifact.file.name}")
+                copy {
+                    from artifact.file
+                    into "build/tmp/submods/META-INF/jars"
+                }
+                def tmpDir = file("build/tmp/includes-meta/${artifact.name}")
+                tmpDir.mkdirs()
+                def modGroup = artifact.moduleVersion.id.group
+                def modName = artifact.name
+                def modVersion = artifact.moduleVersion.id.version
+                def modId = "${modGroup}_${modName}".replace('.', '_').toLowerCase()
+                new File(tmpDir, "fabric.mod.json").text = new JsonBuilder([
+                        schemaVersion: 1,
+                        id           : modId,
+                        version      : modVersion,
+                        name         : modName,
+                        custom       : ["fabric-loom:generated": true]
+                ]).toPrettyString()
+                ant.zip(destfile: destFile, update: true) {
+                    fileset(dir: tmpDir)
+                }
+            }
         }
     }
 
@@ -104,6 +161,12 @@ processResources {
         mods.each({
             jars.add(["file": "META-INF/jars/${project.archives_base_name}-mc${it.minecraft_version}-v${fullModVersion}.jar"])
         })
+
+        if (includes.size() > 0) {
+            configurations.wrapperIncludes.each {
+                jars.add(["file": "META-INF/jars/${it.name}"])
+            }
+        }
 
         File file = file("build/resources/main/fabric.mod.json")
         JsonSlurper slurper = new JsonSlurper()
