@@ -170,6 +170,7 @@ processResources {
         File file = file("build/resources/main/fabric.mod.json")
         JsonSlurper slurper = new JsonSlurper()
         JsonBuilder builder = new JsonBuilder(slurper.parse(file))
+        builder.content.jars = jars
         file.text = builder.toPrettyString()
     }
 }
