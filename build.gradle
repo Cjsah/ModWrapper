@@ -3,7 +3,7 @@ import groovy.json.JsonSlurper
 
 plugins {
     id("java-library")
-    id "me.modmuss50.mod-publish-plugin" version "1.1.0"
+    id "me.modmuss50.mod-publish-plugin" version "2.1.0"
 }
 
 ext {
@@ -33,6 +33,13 @@ ext {
         }
 
         return project.property(key).toString().trim().split(/\s+/)
+    }
+    getPropBoolean = { String key, boolean defaultValue ->
+        if (!project.hasProperty(key)) {
+            return defaultValue
+        }
+
+        return project.property(key).toString().trim().toBoolean()
     }
 }
 
@@ -215,6 +222,8 @@ publishMods {
                 start = startVersion
                 end = endVersion
             }
+            client = getPropBoolean('mod_client_required', true)
+            server = getPropBoolean('mod_server_required', true)
         }
     }
 
