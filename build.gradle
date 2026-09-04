@@ -54,7 +54,7 @@ base {
 }
 
 def mods = project.parent.subprojects.findAll({
-    it.hasProperty('mcVersion')
+    it.hasProperty('wrappableMod')
 })
 
 mods.collect {
