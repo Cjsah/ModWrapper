@@ -61,6 +61,14 @@ mods.collect {
     evaluationDependsOn(":${it.name}")
 }
 
+def includedProjectJars = (project.findProperty('wrapper_include_projects') ?: '')
+        .toString().split(',').collect { it.trim() }.findAll { !it.isEmpty() }.collect { entry ->
+            def parts = entry.split('::', -1).collect { it.trim() }
+            def projectPath = parts[0].startsWith(':') ? parts[0] : ":${parts[0]}"
+            evaluationDependsOn(projectPath)
+            project(projectPath).tasks.named(parts[1], AbstractArchiveTask)
+        }
+
 repositories {
     mavenLocal()
     maven {
@@ -99,6 +107,11 @@ jar {
         def mcVersion = it.findProperty("mcVersion") as int
         mcVersion >= 26_00_00 ? it.tasks.jar : it.tasks.remapJar
     })
+    dependsOn(includedProjectJars)
+
+    from(includedProjectJars.collect { it.flatMap { task -> task.archiveFile } }) {
+        into('META-INF/jars')
+    }
 
     doFirst {
         delete fileTree("build/tmp/submods/META-INF/jars")
@@ -167,6 +180,10 @@ processResources {
         mods.each({
             jars.add(["file": "META-INF/jars/${project.archives_base_name}-mc${it.minecraft_version}-v${fullModVersion}.jar"])
         })
+
+        includedProjectJars.each {
+            jars.add(["file": "META-INF/jars/${it.get().archiveFileName.get()}"])
+        }
 
         if (includes.size() > 0) {
             configurations.wrapperIncludes.each {
