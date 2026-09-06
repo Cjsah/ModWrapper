@@ -61,13 +61,16 @@ mods.collect {
     evaluationDependsOn(":${it.name}")
 }
 
-def includedProjectJars = (project.findProperty('wrapper_include_projects') ?: '')
+def resolveProjectJars = { String propertyName -> (project.findProperty(propertyName) ?: '')
         .toString().split(',').collect { it.trim() }.findAll { !it.isEmpty() }.collect { entry ->
             def parts = entry.split('::', -1).collect { it.trim() }
             def projectPath = parts[0].startsWith(':') ? parts[0] : ":${parts[0]}"
             evaluationDependsOn(projectPath)
             project(projectPath).tasks.named(parts[1], AbstractArchiveTask)
         }
+}
+def includedProjectJars = resolveProjectJars('wrapper_include_projects')
+def additionalProjectJars = resolveProjectJars('wrapper_additional_projects')
 
 repositories {
     mavenLocal()
@@ -206,6 +209,7 @@ java {
 
 publishMods {
     file = jar.archiveFile
+    additionalFiles.from(additionalProjectJars.collect { it.flatMap { task -> task.archiveFile } })
     changelog = rootDir.toPath().resolve("Changelog.md").toFile().text
     type = switch (project.release_channel.toLowerCase()) {
         case "alpha" -> ALPHA
